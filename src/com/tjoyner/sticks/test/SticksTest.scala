@@ -43,6 +43,35 @@ class SticksTest extends AssertionsForJUnit {
 		println("Allmoves zipped: "+ m0)
 		*/
 	}
+	@Test def testCanonicalMove() {
+     val r = List(
+                 List(false), 
+                 List(false, false, false), 
+                 List(true, false, false, false, false),
+                 List(false, false, false, false, false, false, false)
+                 )
+		val s=new Sticks(r)
+        assertEquals((1, 0, 1), s.canonicalMove(Move(0,0,1)))
+        assertEquals((3, 0, 1), s.canonicalMove(Move(1,0,1)))
+        assertEquals((3, 1, 1), s.canonicalMove(Move(1,1,1)))
+        assertEquals((3, 0, 2), s.canonicalMove(Move(1,1,2)))
+        assertEquals((3, 0, 3), s.canonicalMove(Move(1,0,3)))
+        assertEquals((4, 0, 1), s.canonicalMove(Move(2,1,1)))
+        assertEquals((4, 1, 1), s.canonicalMove(Move(2,2,1)))
+        assertEquals((4, 1, 1), s.canonicalMove(Move(2,3,1)))
+        assertEquals((4, 0, 1), s.canonicalMove(Move(2,4,1)))
+        assertEquals((4, 0, 2), s.canonicalMove(Move(2,1,2)))
+        assertEquals((4, 1, 2), s.canonicalMove(Move(2,2,2)))
+        assertEquals((4, 0, 2), s.canonicalMove(Move(2,3,2)))
+        assertEquals((4, 0, 3), s.canonicalMove(Move(2,1,3)))
+        assertEquals((4, 0, 3), s.canonicalMove(Move(2,2,3)))
+        assertEquals((7, 0, 1), s.canonicalMove(Move(3,0,1)))
+        assertEquals((7, 0, 3), s.canonicalMove(Move(3,0,3)))
+        assertEquals((7, 0, 3), s.canonicalMove(Move(3,4,3)))
+
+        assertEquals(Move(0,0,1), s.findEquivalentMove(1,0, 1))
+
+	}
 	@Test def testEndGame() {
 		val s1=new Sticks()
    	    val s2=s1.applyMove(Move(0,0,1))
@@ -82,6 +111,7 @@ class SticksTest extends AssertionsForJUnit {
         LetsPlay.p2 = moveP2
         val game = LetsPlay.play(s)
 		assertEquals((0,1), LetsPlay.results())
+		/*
 		val m1 = LetsPlay.p1BestMoves.moveResults(Move(1,0,1), "3-3")
 		assertEquals(MoveResults(0,1), m1)
 		val m2 = LetsPlay.p2BestMoves.moveResults(Move(2,1,1), "2-3")
@@ -91,5 +121,6 @@ class SticksTest extends AssertionsForJUnit {
         //game.foreach (_.print)
 		val m4 = LetsPlay.p2BestMoves.moveResults(Move(2,3,1), "2")
 		assertEquals(MoveResults(1,0), m4)
+		*/
 	}
 }

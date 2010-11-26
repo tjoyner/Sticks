@@ -2,6 +2,15 @@ package com.tjoyner.sticks
 
 object Sticks {
   def main(args : Array[String]) : Unit = {
+  /*
+	var tmp=new Sticks()
+    //val am = CanonicalMove.allMoves
+    //am foreach println
+    val am = Move.allMoves
+    //am foreach println
+    am foreach (m => println(m + " " + tmp.canonicalMove(m)))
+  return
+  */
 	  val r = List(
                  List(true), 
                  List(false, false, false), 
@@ -454,10 +463,53 @@ class Sticks (){
 			                         List(false, false, false, false, false, false, false))
 	var nextMove = Move(0, 0, 0)
 
+    def findEquivalentMove(cm : CanonicalMove) : Option[Move] = {
+        findEquivalentMove(cm.groupSize, cm.offset, cm.number)
+    }
+    def findEquivalentMove(sz : Int, offset: Int, number : Int) : Option[Move] = {
+        val groups = groupMoves
+        var row = groups.find(_.length == sz).getOrElse(return None)
+        Some(Move(row.head.row, row.head.column+offset, number))
+    }
+
     def findEquivalentMove(sz : Int, number : Int) : Option[Move] = {
+        findEquivalentMove(sz, 0, number)
+        /*
         val groups = groupMoves
         var row = groups.find(_.length == sz).getOrElse(return None)
         Some(Move(row.head.row, row.head.column, number))
+        */
+    }
+    def nextCanonicalMove() : CanonicalMove = {
+		nextMove match {
+			case Move(0,0,0) => return CanonicalMove(0, 0, 0) 
+			case _ => return canonicalMove(nextMove) 
+          }
+    }
+
+    // Returns move in group size, offset, number of sticks to take
+    def canonicalMove(m: Move) : CanonicalMove = {
+        val r = rows(m.row)
+        // get end of this group (via span)
+        // get start of this group (via span)
+        // offset it this start - offset
+        //
+        val (b4, aft) = r splitAt m.column
+        val b4Size = b4.reverse.takeWhile(_ == false).length
+        val aftSize = aft.takeWhile(_ == false).length
+        //println ("b4Size=" + b4Size + ", aftSize=" + aftSize)
+        val groupSize = b4Size + aftSize
+        if (b4Size > 0) {
+            // change group at the end to group at the start
+            if (m.number == aftSize) {
+                return CanonicalMove(groupSize, 0, m.number)
+              } else if (b4Size > (aftSize-1)) {
+                return CanonicalMove(groupSize, aftSize-1, m.number)
+              } else {
+                return CanonicalMove(groupSize, b4Size, m.number)
+              }
+        }
+        CanonicalMove(groupSize, 0, m.number)
     }
 	
 	def this(m : Move, s: Sticks) = {
@@ -611,8 +663,21 @@ object Move {
 		}
 	}
 	import scala.collection.mutable.ListBuffer
-	implicit def allMoves() : List[Move] = {
+	def allMoves() : List[Move] = {
+
+      val rowMax = List(1,3,5,7)
+
+	  val mb = new ListBuffer[Move]
+      for (row <- 0 to 3) {
+        for (off <- 0 to rowMax(row)-1) {
+           for (size <- 1 to rowMax(row)-off) {
+	 	      mb += Move(row, off, size)
+           }
+        }
+      }
+      mb.toList
 		
+        /*
 	  var m = Move(0, 0, 0)
 	  var done = false
 	  val mb = new ListBuffer[Move]
@@ -625,6 +690,7 @@ object Move {
 	 	  }
 	  }
 	   return mb.toList
+       */
 	}
 }
 
@@ -638,6 +704,33 @@ case class Move (val row: Int, val column : Int, val number : Int) extends Order
 	}
 	def compare(that: Move) = {
         (this.row*100 + this.column*10 + this.number) - (that.row*100 + that.column*10 + that.number)
+	}
+}
+
+object CanonicalMove {
+	import scala.collection.mutable.ListBuffer
+
+    def allMoves() : List[CanonicalMove] = {
+
+	  val mb = new ListBuffer[CanonicalMove]
+      for (gs <- 1 to 7) {
+        for (off <- 0 to gs/2) {
+           for (size <- 1 to gs - off) {
+	 	      mb += CanonicalMove(gs, off, size)
+           }
+        }
+      }
+      mb.toList
+	}
+}
+
+case class CanonicalMove (val groupSize: Int, val offset : Int, val number : Int) extends Ordered[CanonicalMove]
+{
+	def print() {
+		println (groupSize + " " + offset + " " + number)
+	}
+	def compare(that: CanonicalMove) = {
+        (this.groupSize*100 + this.offset*10 + this.number) - (that.groupSize*100 + that.offset*10 + that.number)
 	}
 }
 
@@ -659,13 +752,13 @@ class BestMoves
 	 * tuples. 
 	 */
 	
-	val bestMoves = new HashMap[String, HashMap[Move, MoveResults]] //{ override def default(key:String) = () }
+	val bestMoves = new HashMap[String, HashMap[CanonicalMove, MoveResults]] //{ override def default(key:String) = () }
 	
 	var p1Wins = 0
 	var p2Wins = 0
 	
-	def toString(m : HashMap[Move, MoveResults]) : String = {
-		val s = SortedMap[Move, MoveResults]() ++ m
+	def toString(m : HashMap[CanonicalMove, MoveResults]) : String = {
+		val s = SortedMap[CanonicalMove, MoveResults]() ++ m
 		"" + s
 	}
 	override def toString() : String = {
@@ -690,13 +783,13 @@ class BestMoves
 			if (bestMoves.contains(winners.head.canonical())) {
 				val entry = bestMoves(winners.head.canonical())
 		        //if (!p1Won) entry(winners.head.nextMove).wins += 1
-		        if (won) entry(winners.head.nextMove).wins += 1
+		        if (won) entry(winners.head.nextCanonicalMove).wins += 1
 		        //entry(winners.head.nextMove).wins += 1
 			} else {
-				val entry = HashMap.empty[Move, MoveResults]
-				Move.allMoves foreach (x => entry.update(x, MoveResults(0,0)))
+				val entry = HashMap.empty[CanonicalMove, MoveResults]
+				CanonicalMove.allMoves foreach (x => entry.update(x, MoveResults(0,0)))
 		        //if (!p1Won) entry(winners.head.nextMove).wins += 1
-		        if (won) entry(winners.head.nextMove).wins += 1
+		        if (won) entry(winners.head.nextCanonicalMove).wins += 1
 		        //if (won) entry(winners.head.nextMove).wins += 1
 				bestMoves.update(winners.head.canonical(), entry)
 			//println("Tom hm " + hm(Move(0,0,1)))
@@ -713,14 +806,14 @@ class BestMoves
 			if (bestMoves.contains(losers.head.canonical())) {
 				val entry = bestMoves(losers.head.canonical())
 		        //if (p1Won) entry(losers.head.nextMove).losses += 1
-		        if (!won) entry(losers.head.nextMove).losses += (1 * weight)
+		        if (!won) entry(losers.head.nextCanonicalMove).losses += (1 * weight)
                 //if (!won && !p1) 
                 //println("P2: " + losers.head.canonical() + ": " + losers.head.nextMove + ", " + entry(losers.head.nextMove))
 		        //entry(losers.head.nextMove).losses += 1
 			} else {
-				val entry = HashMap.empty[Move, MoveResults]
-				Move.allMoves foreach (x => entry.update(x, MoveResults(0,0)))
-		        if (!won) entry(losers.head.nextMove).losses += (1 * weight)
+				val entry = HashMap.empty[CanonicalMove, MoveResults]
+				CanonicalMove.allMoves foreach (x => entry.update(x, MoveResults(0,0)))
+		        if (!won) entry(losers.head.nextCanonicalMove).losses += (1 * weight)
                 //if (!won && !p1) 
                 //println("P2: " + losers.head.canonical() + ": " + losers.head.nextMove + ", " + entry(losers.head.nextMove))
 		        //if (!p1Won) entry(losers.head.nextMove).losses += 1
@@ -741,18 +834,24 @@ class BestMoves
 			addLoser(game)
 		}
 	}
-	def possibleMoves(s : Sticks) : List[(Move, Int)] = {
+	def possibleMoves(s : Sticks) : List[(CanonicalMove, Int)] = {
 		if (bestMoves.contains(s.canonical())) {
 			val bm = bestMoves(s.canonical()).toList sortBy(_._2)
 			for (b <- bm) yield (b._1, (b._2.wins - b._2.losses))
 		} else {
-			for (a <-Move.allMoves) yield (a, 0)
+			for (a <-CanonicalMove.allMoves) yield (a, 0)
 			//Move.allMoves.zip(List(0))
 		}
 	}
 	def bestMove(s : Sticks) : (Move, Int) = {
 		val pm = possibleMoves(s)
-		for (m <- pm) if (s.validMove(m._1)) return m
+		for (cm <- pm) {
+            val em = s.findEquivalentMove(cm._1)
+            em match {
+              case Some(m) => if (s.validMove(m)) return (m, cm._2)
+              case None =>
+            }
+          }
 		throw new BadMove
 	}
 
@@ -765,7 +864,7 @@ class BestMoves
 	}
     */
 
-	def moveResults(m : Move, canonical: String) : MoveResults = {
+	def moveResults(m : CanonicalMove, canonical: String) : MoveResults = {
         if (bestMoves.contains(canonical)) {
         	val entry = bestMoves(canonical)
         	if (entry contains m) {
