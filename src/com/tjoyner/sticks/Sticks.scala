@@ -2,35 +2,36 @@ package com.tjoyner.sticks
 
 object Sticks {
   def main(args : Array[String]) : Unit = {
-  /*
-	var tmp=new Sticks()
+	//var tmp=new Sticks()
     //val am = CanonicalMove.allMoves
     //am foreach println
-    val am = Move.allMoves
+    //val am = Move.allMoves
     //am foreach println
-    am foreach (m => println(m + " " + tmp.canonicalMove(m)))
-  return
-  */
+    //am foreach (m => println(m + " " + tmp.canonicalMove(m)))
+  //return
 	  val r = List(
-                 List(true), 
+                 List(false), 
                  List(false, false, false), 
-                 List(false, false, false, true, true),
-                 List(true, true, true, true, true, true, true)
+                 List(false, false, false, false, false),
+                 List(false, false, false, false, false, false, false)
                  )
 	  var s=new Sticks(r)
+      //println(s.canonicalMove(Move(3,2,4)))
+      //return
 	   //LetsPlay.p1 = LetsPlay.randomMove
 	   //LetsPlay.p2 = LetsPlay.cannedStrategy
 	   //LetsPlay.p2 = LetsPlay.humanMove
 	   //LetsPlay.p1 = LetsPlay.cannedStrategy
 	   //LetsPlay.p1 = LetsPlay.cannedStrategy
 	   //LetsPlay.p2 = LetsPlay.randomMove
-	   LetsPlay.p1 = LetsPlay.randomMove
+	   LetsPlay.p1 = LetsPlay.autoMoveP1
 	   LetsPlay.p2 = LetsPlay.autoMoveP2
 	   for (i <- 1 to 40000) {
           //println("Game " + i + "********************************************************")
 	  	   val l2 = LetsPlay.play(s)
            //println(LetsPlay.p2BestMoves)
            //println(LetsPlay.p2BestMoves.toString("2-3"))
+           /*
            if (i > 5000) {
             if (LetsPlay.p1Won) {
                 println("################################################")
@@ -38,6 +39,8 @@ object Sticks {
                   {
                     println(x)
                     println(x.nextMove)
+		            val pm = LetsPlay.p2BestMoves.possibleMoves(x)
+                    println ("sorted p2 pm=" + pm)
                     println(LetsPlay.p2BestMoves.toString(x.canonical())) 
                   }
                   )
@@ -45,12 +48,25 @@ object Sticks {
                 return
             }
            }
+           */
            if (i % 1000 == 0) println("Results after " + i +" games: " + LetsPlay.results)
            // println("Results after " + i +" moves: " + LetsPlay.results)
             //l2 foreach println
             //timesout
        }
             println("Results: " + LetsPlay.results)
+       LetsPlay.p1Wins = 0
+       LetsPlay.p2Wins = 0
+	   LetsPlay.p1 = LetsPlay.humanMove
+	   for (i <- 1 to 2) {
+	  	   val l2 = LetsPlay.play(s)
+                l2 foreach ( x => 
+                    {
+                    println(x)
+                    println(x.nextMove)
+                  }
+                  )
+       }
             return
        LetsPlay.p1Wins = 0
        LetsPlay.p2Wins = 0
@@ -497,14 +513,13 @@ class Sticks (){
         val (b4, aft) = r splitAt m.column
         val b4Size = b4.reverse.takeWhile(_ == false).length
         val aftSize = aft.takeWhile(_ == false).length
-        //println ("b4Size=" + b4Size + ", aftSize=" + aftSize)
         val groupSize = b4Size + aftSize
         if (b4Size > 0) {
             // change group at the end to group at the start
             if (m.number == aftSize) {
                 return CanonicalMove(groupSize, 0, m.number)
-              } else if (b4Size > (aftSize-1)) {
-                return CanonicalMove(groupSize, aftSize-1, m.number)
+            } else if (b4Size > (aftSize-m.number)) { // tjj
+                return CanonicalMove(groupSize, aftSize-m.number, m.number)
               } else {
                 return CanonicalMove(groupSize, b4Size, m.number)
               }
@@ -663,10 +678,12 @@ object Move {
 		}
 	}
 	import scala.collection.mutable.ListBuffer
-	def allMoves() : List[Move] = {
-
-      val rowMax = List(1,3,5,7)
-
+	def allMoves(canonical: String) : List[Move] = {
+        val a = canonical.split('-').toList
+        val i = a.map(_.toInt)
+        allMoves(i)
+    }
+	def allMoves(rowMax : List[Int]) : List[Move] = {
 	  val mb = new ListBuffer[Move]
       for (row <- 0 to 3) {
         for (off <- 0 to rowMax(row)-1) {
@@ -676,6 +693,11 @@ object Move {
         }
       }
       mb.toList
+    }
+	def allMoves() : List[Move] = {
+
+      val rowMax = List(1,3,5,7)
+      allMoves(rowMax)
 		
         /*
 	  var m = Move(0, 0, 0)
@@ -716,12 +738,38 @@ object CanonicalMove {
       for (gs <- 1 to 7) {
         for (off <- 0 to gs/2) {
            for (size <- 1 to gs - off) {
-	 	      mb += CanonicalMove(gs, off, size)
+             if ((gs-(off+size)) >= off)  
+	 	        mb += CanonicalMove(gs, off, size)
            }
         }
       }
       mb.toList
 	}
+	def allMoves(canonical: String) : List[CanonicalMove] = {
+        val a = canonical.split('-').toList
+        val a2 = removeDuplicates(a)
+        val i = a2.map(_.toInt)
+        allMoves(i)
+    }
+	def allMoves(groups : List[Int]) : List[CanonicalMove] = {
+	  val mb = new ListBuffer[CanonicalMove]
+      groups foreach (gs => {
+        for (off <- 0 to gs/2) {
+           for (size <- 1 to gs - off) {
+             if ((gs-(off+size)) >= off)  
+	 	      mb += CanonicalMove(gs, off, size)
+           }
+        }
+      })
+      mb.toList
+    }
+    def removeDuplicates[A](xs: List[A]): List[A] = {
+      if (xs.isEmpty) xs
+      else
+      xs.head :: removeDuplicates(
+      xs.tail filter (x => x != xs.head)
+      )
+    }
 }
 
 case class CanonicalMove (val groupSize: Int, val offset : Int, val number : Int) extends Ordered[CanonicalMove]
@@ -742,6 +790,7 @@ case class MoveResults (var wins: Int, var losses: Int) extends (Ordered[MoveRes
 { 
 	def compare (that: MoveResults) = {
 		(this.losses-this.wins) - (that.losses-that.wins)
+		//(this.losses-that.losses)
 	}
 }
 
@@ -780,18 +829,19 @@ class BestMoves
 			//println("Tom addWinner " + winners.head.nextMove)
 			//println("Tom whc " + winners.head.canonical)
 			if (winners.head.nextMove == Move(0, 0, 0)) return
-			if (bestMoves.contains(winners.head.canonical())) {
-				val entry = bestMoves(winners.head.canonical())
+            val canonical = winners.head.canonical
+			if (bestMoves.contains(canonical)) {
+				val entry = bestMoves(canonical)
 		        //if (!p1Won) entry(winners.head.nextMove).wins += 1
 		        if (won) entry(winners.head.nextCanonicalMove).wins += 1
 		        //entry(winners.head.nextMove).wins += 1
 			} else {
 				val entry = HashMap.empty[CanonicalMove, MoveResults]
-				CanonicalMove.allMoves foreach (x => entry.update(x, MoveResults(0,0)))
+				CanonicalMove.allMoves(canonical) foreach (x => entry.update(x, MoveResults(0,0)))
 		        //if (!p1Won) entry(winners.head.nextMove).wins += 1
 		        if (won) entry(winners.head.nextCanonicalMove).wins += 1
 		        //if (won) entry(winners.head.nextMove).wins += 1
-				bestMoves.update(winners.head.canonical(), entry)
+				bestMoves.update(canonical, entry)
 			//println("Tom hm " + hm(Move(0,0,1)))
 			}
 			winners match {
@@ -803,8 +853,9 @@ class BestMoves
 		def addLoser(losers : List[Sticks]) : Unit = {
 			//println("Tom addLoser " + losers.head.nextMove)
 			if (losers.head.nextMove == Move(0, 0, 0)) return
-			if (bestMoves.contains(losers.head.canonical())) {
-				val entry = bestMoves(losers.head.canonical())
+            val canonical = losers.head.canonical
+			if (bestMoves.contains(canonical)) {
+				val entry = bestMoves(canonical)
 		        //if (p1Won) entry(losers.head.nextMove).losses += 1
 		        if (!won) entry(losers.head.nextCanonicalMove).losses += (1 * weight)
                 //if (!won && !p1) 
@@ -812,13 +863,13 @@ class BestMoves
 		        //entry(losers.head.nextMove).losses += 1
 			} else {
 				val entry = HashMap.empty[CanonicalMove, MoveResults]
-				CanonicalMove.allMoves foreach (x => entry.update(x, MoveResults(0,0)))
+				CanonicalMove.allMoves(canonical) foreach (x => entry.update(x, MoveResults(0,0)))
 		        if (!won) entry(losers.head.nextCanonicalMove).losses += (1 * weight)
                 //if (!won && !p1) 
                 //println("P2: " + losers.head.canonical() + ": " + losers.head.nextMove + ", " + entry(losers.head.nextMove))
 		        //if (!p1Won) entry(losers.head.nextMove).losses += 1
 		        //entry(losers.head.nextMove).losses += 1
-				bestMoves.update(losers.head.canonical(), entry)
+				bestMoves.update(canonical, entry)
 			}
             weight *= 1 // Experimenting...
 			losers match {
@@ -839,7 +890,7 @@ class BestMoves
 			val bm = bestMoves(s.canonical()).toList sortBy(_._2)
 			for (b <- bm) yield (b._1, (b._2.wins - b._2.losses))
 		} else {
-			for (a <-CanonicalMove.allMoves) yield (a, 0)
+			for (a <- CanonicalMove.allMoves(s.canonical)) yield (a, 0)
 			//Move.allMoves.zip(List(0))
 		}
 	}
