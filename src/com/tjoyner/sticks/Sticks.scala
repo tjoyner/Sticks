@@ -26,13 +26,12 @@ object Sticks {
 	   //LetsPlay.p2 = LetsPlay.randomMove
 	   LetsPlay.p1 = LetsPlay.autoMoveP1
 	   LetsPlay.p2 = LetsPlay.autoMoveP2
-	   for (i <- 1 to 40000) {
+	   for (i <- 1 to 1000000) {
           //println("Game " + i + "********************************************************")
 	  	   val l2 = LetsPlay.play(s)
            //println(LetsPlay.p2BestMoves)
            //println(LetsPlay.p2BestMoves.toString("2-3"))
-           /*
-           if (i > 5000) {
+           if (i > 990000) {
             if (LetsPlay.p1Won) {
                 println("################################################")
                 l2 foreach ( x => 
@@ -41,6 +40,21 @@ object Sticks {
                     println(x.nextMove)
 		            val pm = LetsPlay.p2BestMoves.possibleMoves(x)
                     println ("sorted p2 pm=" + pm)
+	                println ("Best move would be" + LetsPlay.p2BestMoves.bestMove(x)._1)
+	                println ("Best p1 move would be" + LetsPlay.p1BestMoves.bestMove(x)._1)
+	                println ("Actual move would be" + x.nextMove)
+                    var fnd = false
+                    for (cm <- pm) {
+                    if (!fnd) {
+                    println ("trying=" + cm)
+                        val em = s.findEquivalentMove(cm._1)
+                    println ("trying em=" + em)
+                        em match {
+                          case Some(m) => if (s.validMove(m))  {println(em + " is valid "); fnd=true}
+                          case None => println("em " + em + " not valid.")
+                        }
+                      }
+                    }
                     println(LetsPlay.p2BestMoves.toString(x.canonical())) 
                   }
                   )
@@ -48,13 +62,13 @@ object Sticks {
                 return
             }
            }
-           */
            if (i % 1000 == 0) println("Results after " + i +" games: " + LetsPlay.results)
            // println("Results after " + i +" moves: " + LetsPlay.results)
             //l2 foreach println
             //timesout
        }
             println("Results: " + LetsPlay.results)
+            return
        LetsPlay.p1Wins = 0
        LetsPlay.p2Wins = 0
 	   LetsPlay.p1 = LetsPlay.humanMove
@@ -607,6 +621,8 @@ class Sticks (){
 		val end = m.column + m.number - 1
 		if (end > r.size-1) return false
 
+		for (i <- m.column to end if r(i)) return false
+
         val groups = groupMoves
         // Last group
         if (groups.tail == Nil) {
@@ -617,7 +633,6 @@ class Sticks (){
             }
         }
 
-		for (i <- m.column to end if r(i)) return false
 		return true;
 	}
 	
@@ -789,8 +804,9 @@ import scala.collection.immutable.SortedMap
 case class MoveResults (var wins: Int, var losses: Int) extends (Ordered[MoveResults])
 { 
 	def compare (that: MoveResults) = {
-		(this.losses-this.wins) - (that.losses-that.wins)
-		//(this.losses-that.losses)
+		//(this.losses-this.wins) - (that.losses-that.wins)
+	//	(this.losses-that.losses)
+        if (this.wins == 0 && this.losses == 0) -1000 else (this.losses-that.losses)
 	}
 }
 
