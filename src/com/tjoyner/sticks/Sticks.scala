@@ -804,9 +804,9 @@ import scala.collection.immutable.SortedMap
 case class MoveResults (var wins: Int, var losses: Int) extends (Ordered[MoveResults])
 { 
 	def compare (that: MoveResults) = {
-		//(this.losses-this.wins) - (that.losses-that.wins)
-	//	(this.losses-that.losses)
-        if (this.wins == 0 && this.losses == 0) -1000 else (this.losses-that.losses)
+		(this.losses-this.wins) - (that.losses-that.wins)
+		//(this.losses-that.losses)
+        //if (this.wins == 0 && this.losses == 0) -1000 else (this.losses-that.losses)
 	}
 }
 
